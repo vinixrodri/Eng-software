@@ -1,0 +1,22 @@
+{
+    "name": "Cupcake Joy",
+    "short_name": "Cupcake Joy",
+    "description": "Uma plataforma completa para explorar o catálogo de cupcakes artesanais, realizar pedidos personalizados, processar pagamentos seguros e acompanhar a entrega diretamente no seu endereço.",
+    "icons": [
+        {
+            "src": "https://media.base44.com/images/public/6add78e562b3639e3a6d8610/7b1dbe0cf_logo.png/v1/fit/w_192,h_192/7b1dbe0cf_logo.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "https://media.base44.com/images/public/6add78e562b3639e3a6d8610/7b1dbe0cf_logo.png/v1/fit/w_512,h_512/7b1dbe0cf_logo.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ],
+    "start_url": "https://cupcake-joy-go.base44.app",
+    "display": "standalone",
+    "theme_color": "#000000",
+    "background_color": "#ffffff",
+    "scope": "https://cupcake-joy-go.base44.app"
+}
