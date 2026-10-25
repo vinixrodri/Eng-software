@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+ <head>
+  <script>
+   (function () {
+  var proto = XMLHttpRequest.prototype;
+  var open = proto.open, setRequestHeader = proto.setRequestHeader, send = proto.send;
+  var TOKEN_KEY = 'base44_access_token';
+  var storedTokenHeader = function () {
+    try { return 'Bearer ' + localStorage.getItem(TOKEN_KEY); } catch (e) { return null; }
+  };
+  var forgetStoredToken = function () {
+    try { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem('token'); } catch (e) {}
+  };
+
+  proto.open = function (method, url) {
+    this.__b44IsAuthCheck = /\/entities\/User\/me(\?|$)/.test(url);
+    return open.apply(this, arguments);
+  };
+
+  proto.setRequestHeader = function (name, value) {
+    if (this.__b44IsAuthCheck && name.toLowerCase() === 'authorization' && value === storedTokenHeader()) {
+      this.__b44SentToken = value;
+    }
+    return setRequestHeader.call(this, name, value);
+  };
+
+  proto.send = function () {
+    this.addEventListener('loadend', function () {
+      var rejectedTokenStillStored = this.status === 401 && this.__b44SentToken === storedTokenHeader();
+      if (rejectedTokenStillStored) forgetStoredToken();
+    });
+    return send.apply(this, arguments);
+  };
+})();
+  </script>
+  <script>
+   self["MonacoEnvironment"] = (function (paths) {
+          return {
+            globalAPI: false,
+            getWorkerUrl : function (moduleId, label) {
+              var result =  paths[label];
+              if (/^((http:)|(https:)|(file:)|(\/\/))/.test(result)) {
+                var currentUrl = String(window.location);
+                var currentOrigin = currentUrl.substr(0, currentUrl.length - window.location.hash.length - window.location.search.length - window.location.pathname.length);
+                if (result.substring(0, currentOrigin.length) !== currentOrigin) {
+                  var js = '/*' + label + '*/importScripts("' + result + '");';
+                  var blob = new Blob([js], { type: 'application/javascript' });
+                  return URL.createObjectURL(blob);
+                }
+              }
+              return result;
+            }
+          };
+        })({
+  "editorWorkerService": "/monacoeditorwork/editor.worker.bundle.js",
+  "typescript": "/monacoeditorwork/ts.worker.bundle.js",
+  "json": "/monacoeditorwork/json.worker.bundle.js",
+  "css": "/monacoeditorwork/css.worker.bundle.js",
+  "html": "/monacoeditorwork/html.worker.bundle.js",
+  "javascript": "/monacoeditorwork/ts.worker.bundle.js",
+  "less": "/monacoeditorwork/css.worker.bundle.js",
+  "scss": "/monacoeditorwork/css.worker.bundle.js",
+  "handlebars": "/monacoeditorwork/html.worker.bundle.js",
+  "razor": "/monacoeditorwork/html.worker.bundle.js"
+});
+  </script>
+  <!-- Runtime config — must execute before the Vite module scripts read
+         window.__APP_CONFIG__. `defer` keeps that order (deferred classic
+         scripts and module scripts run in document order after parsing) while
+         unblocking the HTML parser, so asset preloads start immediately
+         instead of stalling ~160ms (p75) on this API round trip.
+         Back on the .js path: Render's extension-keyed edge cache rule twice
+         pinned a wrong body under this URL despite `no-store` (2026-08-20 and
+         2026-08-24); Render has since removed that cache rule for us, so the
+         suffix is safe again. If poisoning recurs: bump the `?v=` cache key,
+         or switch the src to the extension-less /api/frontend-config route
+         (kept serving as an escape hatch). -->
+  <script defer="" src="/api/frontend-config.js?v=3">
+  </script>
+  <script async="" src="https://accounts.google.com/gsi/client">
+  </script>
+  <meta charset="utf-8"/>
+  <!-- Platform favicon: a real multi-size ICO (16/32/48) of the current sun
+         mark, served from public/. This is the ONLY rel="icon" link, and it
+         must stay that way — App.js rewrites the first match for backoffice.
+         Crawlers and link scrapers read this tag (and probe /favicon.ico
+         directly) with no JS, so the brand has to be correct statically. -->
+  <link href="https://media.base44.com/images/public/6add78e562b3639e3a6d8610/7b1dbe0cf_logo.png/v1/fit/w_180,h_180/7b1dbe0cf_logo.png" rel="icon" sizes="any"/>
+  <script>
+   // Pre-paint theme stamp for the Appearance (appearance-themes) cohort: on
+      // a hard load the theme is applied by React (AppearanceThemeApplier) only after
+      // auth resolves, so the document boots light — a white flash,
+      // then light route skeletons (the FOUC this removes). AppearanceThemeApplier
+      // persists 'appearance-theme-applied' only while the feature is active,
+      // so every other cohort (flag-off, native, backoffice, runtime apps)
+      // never sets it and this stays a no-op. React stays the source of truth
+      // after mount: AppearanceThemeApplier
+      // re-applies or clears these exact attributes. Keys must stay byte-identical
+      // with components/settings/useAppearanceTheme.ts — BOOT_STAMP_CONTRACT there is
+      // asserted against this file by useAppearanceTheme.spec.ts, so update both.
+      //
+      // Kill-switch caveat: the marker is written while the feature is active and
+      // only cleared once /me resolves. On the FIRST load after a user loses the
+      // flag — or after the kill switch is flipped mid-incident — this still
+      // stamps dark, then React settles to light: one dark→light flash, which
+      // self-heals from the next load on. Flipping the switch does not repaint
+      // already-open tabs pre-paint; it collapses them on their next load.
+      try {
+        if ((localStorage.getItem('appearance-theme-applied') || localStorage.getItem('demo-display-theme-applied')) === '1') {
+          var appearanceTheme = localStorage.getItem('appearance-theme') || localStorage.getItem('demo-display-theme');
+          var appearanceDark = appearanceTheme === 'dark' ||
+            (appearanceTheme !== 'light' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          if (appearanceDark) {
+            var appearanceRoot = document.documentElement;
+            appearanceRoot.setAttribute('data-ds', 'base44');
+            appearanceRoot.setAttribute('data-theme', 'dark');
+            appearanceRoot.classList.add('dark');
+            // Kill the pre-CSS white document flash; the app paints over it.
+            appearanceRoot.style.backgroundColor = '#09090b';
+          }
+        }
+      } catch (e) {}
+  </script>
+  <meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+  <meta content="#000000" name="theme-color"/>
+  <meta content="Uma plataforma completa para explorar o catálogo de cupcakes artesanais, realizar pedidos personalizados, processar pagamentos seguros e acompanhar a entrega diretamente no seu endereço." name="description"/>
+  <meta content="yes" name="mobile-web-app-capable"/>
+  <meta content="black" name="apple-mobile-web-app-status-bar-style"/>
+  <meta content="Cupcake Joy" name="apple-mobile-web-app-title"/>
+  <link href="https://media.base44.com/images/public/6add78e562b3639e3a6d8610/7b1dbe0cf_logo.png/v1/fit/w_180,h_180/7b1dbe0cf_logo.png" rel="apple-touch-icon" sizes="180x180"/>
+  <link href="https://cupcake-joy-go.base44.app/manifest.json" rel="manifest"/>
+  <title>
+   Cupcake Joy
+  </title>
+  <!-- Open Graph / Facebook -->
+  <meta content="website" property="og:type"/>
+  <meta content="https://cupcake-joy-go.base44.app" property="og:url"/>
+  <meta content="Cupcake Joy" property="og:title"/>
+  <meta content="Cupcake Joy" property="og:site_name"/>
+  <meta content="Uma plataforma completa para explorar o catálogo de cupcakes artesanais, realizar pedidos personalizados, processar pagamentos seguros e acompanhar a entrega diretamente no seu endereço." property="og:description"/>
+  <meta content="https://media.base44.com/images/public/6add78e562b3639e3a6d8610/7b1dbe0cf_logo.png/v1/fill/w_1200,h_630/7b1dbe0cf_logo.png" property="og:image"/>
+  <meta content="1200" property="og:image:width"/>
+  <meta content="630" property="og:image:height"/>
+  <meta content="Base44 link preview" property="og:image:alt"/>
+  <!-- Twitter -->
+  <meta content="summary_large_image" name="twitter:card"/>
+  <meta content="https://cupcake-joy-go.base44.app" name="twitter:url"/>
+  <meta content="Cupcake Joy" name="twitter:title"/>
+  <meta content="Uma plataforma completa para explorar o catálogo de cupcakes artesanais, realizar pedidos personalizados, processar pagamentos seguros e acompanhar a entrega diretamente no seu endereço." name="twitter:description"/>
+  <meta content="https://media.base44.com/images/public/6add78e562b3639e3a6d8610/7b1dbe0cf_logo.png/v1/fill/w_1200,h_630/7b1dbe0cf_logo.png" name="twitter:image"/>
+  <meta content="Base44 link preview" name="twitter:image:alt"/>
+  <script crossorigin="" src="/static/index-34zv7ZR0.js" type="module">
+  </script>
+  <link crossorigin="" href="/static/rolldown-runtime-C0FnF6B9.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/runtime-QtgwY_nV.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/backend-4ZrxM0vc.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/vendor-react-BOOIA4XI.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/preload-helper-BZ1Pz5am.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/vendor-data-I8anOvOp.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/errorReporting-DoGrKPJu.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/i18n-Cnp1HaRT.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/vendor-utils-Bk5YXKIq.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/mixpanelUtils-BU9LAnYJ.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/use-toast-hWsBACKm.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/bridge-Cq_Szqk4.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/axiosClient-B5CfCJbf.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/domainValidation-FMKryCR2.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/I18nProvider-CUMSc7zH.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/dist-DEyOCB6o.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/vendor-ui-2mCfXwwb.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/base-DmXExKd5.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/AuthAPI-B9xTDPla.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/useDesignSystem-CVilD4PW.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/logoutReturnPath-HjtsxsFd.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/AuthContext-D-aPB4P6.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/dist-DXiUvyIt.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/useHideNativeBottomTabs-Dp2B4zpg.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/native-mobile-app-5lZBItr7.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/prop-types-D9WxI36-.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/esm-DmulnS_m.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/use-mobile-BkCzYCbw.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/create-zustand-store-DL3dpDdo.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/persist-to-storage-B-ZRdMYd.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/actions.middleware-D_eRWZoy.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/WorkspaceAPI-BP_N8uqX.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/useWorkspaceUnlockState-Cg67Ec9B.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/WorkspaceContext-DBO7nFWS.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/react-kH6mxSOK.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/useFeatureFlags-CY_e5BId.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/utils-DtrZdKNM.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/toast-W3AUWFDE.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/moment-CbrR2L3o.js" rel="modulepreload"/>
+  <link crossorigin="" href="/static/index-BlYK4iZ6.css" rel="stylesheet"/>
+  <script id="base44-runtime-tailwind-config">
+   window.tailwind = window.tailwind || {}; window.tailwind.config = { darkMode: 'class' };
+  </script>
+  <script id="base44-runtime-tailwind-cdn" src="https://cdn.tailwindcss.com">
+  </script>
+  <script>
+   (function () {
+  var titles = {"/": "Cupcake Joy", "/checkout": "Checkout | Cupcake Joy", "/acompanhar": "Acompanhar | Cupcake Joy", "/login": "Login | Cupcake Joy", "/register": "Register | Cupcake Joy", "/forgot-password": "Forgot Password | Cupcake Joy", "/reset-password": "Reset Password | Cupcake Joy", "/home": "Cupcake Joy"};
+  // PascalCase boundaries -> "-", mirroring _PASCAL_BOUNDARY_RE without lookbehind
+  // (old Safari fails to PARSE a lookbehind, taking the whole script down).
+  var dashed = function (s) {
+    return s.replace(/([a-z0-9])([A-Z])/g, "$1-$2").replace(/([A-Z])([A-Z][a-z])/g, "$1-$2");
+  };
+  var decode = function (s) {
+    // A %2F inside ONE segment must not become a structural separator: /blog/foo%2Fbar is a
+    // dynamic slug, and letting it split would match a static /blog/foo/bar and write ITS title.
+    try { var d = decodeURIComponent(s); return d.indexOf("/") < 0 ? d : s; } catch (e) { return s; }
+  };
+  var segments = function (path) { return path.split("/").filter(Boolean).map(decode); };
+  var norm = function (path) {
+    var parts = segments(path).map(function (s) { return dashed(s).toLowerCase(); });
+    return parts.length ? "/" + parts.join("/") : "/";
+  };
+  var lastPath = location.pathname, written = document.title, on = true;
+  var sync = function () {
+    // Path only: a hash/query change is the same page, and the SDK strips its own auth
+    // params with replaceState -- neither must clobber a server-rendered title in place.
+    if (!on || location.pathname === lastPath) return;
+    lastPath = location.pathname;
+    if (document.title !== written) { on = false; return; }
+    // Write ONLY a title the map proves. An unmapped path is a dynamic route (/blog/:slug) the
+    // map cannot carry, and writing a placeholder there is destructive, not merely vague: the
+    // prerender worker runs no setUserAgent, so its capture browser reads as human and executes
+    // this script, and coordinator.js's settle wait explicitly tolerates a full navigation --
+    // a redirect landing on an unmapped path would bake the placeholder into the stored
+    // snapshot. Leaving the title alone degrades to today's behavior instead.
+    // Exact lookup only. A dash-stripped retry here would let a genuinely different /set-up
+    // claim /setup: the map carries a dash-free key only where a PascalCase boundary put the
+    // dashes there, and the client cannot tell the two apart. The map emits every reachable
+    // shape per segment instead (_client_url_variants).
+    var title = titles[norm(location.pathname)];
+    if (title === undefined) return;
+    document.title = title;
+    // Re-read: the setter stores verbatim but the getter strips and collapses whitespace, so
+    // keeping the assigned string would make the next sync() read our own write as the app's.
+    written = document.title;
+  };
+  var wrap = function (fn) {
+    // The history entry is already pushed by the time sync() runs, so a throw here would
+    // surface inside the host app's router and break navigation. This is injected into apps
+    // we cannot test, so it swallows rather than trusting the trace.
+    return function () {
+      var r = fn.apply(this, arguments);
+      try { sync(); } catch (e) {}
+      return r;
+    };
+  };
+  history.pushState = wrap(history.pushState);
+  history.replaceState = wrap(history.replaceState);
+  window.addEventListener("popstate", sync);
+})();
+  </script>
+  <script async="true" data-app-id="6add78e562b3639e3a6d8610" data-platform-url="https://app.base44.com" src="/static/js/badge.js">
+  </script>
+ </head>
+ <body>
+  <noscript>
+   You need to enable JavaScript to run this app.
+  </noscript>
+  <div id="root">
+  </div>
+ </body>
+</html>
